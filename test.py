@@ -1,5 +1,9 @@
+"""Requests to pull info from manga sites. Using get"""
 import requests
 
-r = requests.get('https://google.com')
+"""Analyze the contents of HTML content from requests.content"""
+from bs4 import BeautifulSoup
 
-print('hello world')
+req = requests.get('https://google.com')
+soup = BeautifulSoup(req.content, 'html.parser')
+print(soup.prettify())
