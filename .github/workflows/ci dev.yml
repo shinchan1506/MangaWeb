@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, reopened]
 
-  # Temporarily allow running this workflow from actions tab.
+  # Temporarily allow running this workflow from actions tab.\
   workflow_dispatch:
 
 jobs:
