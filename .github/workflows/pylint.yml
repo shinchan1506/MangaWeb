@@ -28,7 +28,7 @@ jobs:
       run: |
         OUTPUT=$(pylint $(git ls-files '*.py'))
         RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
-        PASSED=$(bc -l <<<"${RATING}<8.0")
+        PASSED=$(bc -l <<<"${RATING}>8.0")
         echo "PylintPassed=$PASSED" >> $GITHUB_ENV
 
     - name: Check Scan result
