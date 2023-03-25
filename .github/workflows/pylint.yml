@@ -30,7 +30,7 @@ jobs:
         RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
         echo "PYLINTSCORE=$RATING" >> $GITHUB_ENV
     - name: Check Scan result
-      if: ${{ env.PYLINTSCORE }} <= ${{ 7.0 }}
+      if: ${{ env.PYLINTSCORE + 0.0 < 8.0 }}
       uses: actions/github-script@v3
       with:
         script: |
