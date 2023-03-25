@@ -85,7 +85,7 @@ jobs:
     needs: [analyze, pylint]
     runs-on: ubuntu-latest
     steps:
-      - name: True if scan passed
+    - name: True if scan passed
       if: ${{ env.PYLINTSCORE >= 50.0 }}
       run: |
         echo "true"
