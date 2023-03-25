@@ -21,4 +21,6 @@ jobs:
         python -m pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        OUTPUT=$(pylint $(git ls-files '*.py'))
+        RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
+        echo "PYLINTSCORE=$RATING" >> $GITHUB_ENV
