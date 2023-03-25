@@ -28,10 +28,11 @@ jobs:
       run: |
         OUTPUT=$(pylint $(git ls-files '*.py'))
         RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
-        echo "PYLINTSCORE=$RATING" >> $GITHUB_ENV
-        echo "PYLINTLIMIT=${{8.0}}" >> $GITHUB_ENV
+        PASSED=$(bc -l <<<"${RATING}<8.0")
+        echo "PylintPassed=$PASSED" >> $GITHUB_ENV
+
     - name: Check Scan result
-      if: ${{ env.PYLINTSCORE < env.PYLINTLIMIT }}
+      if: ${{ env.PylintPassed == 0 }}
       uses: actions/github-script@v3
       with:
         script: |
