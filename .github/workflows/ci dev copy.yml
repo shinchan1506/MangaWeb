@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -57,6 +56,7 @@ jobs:
 
   analyze:
     name: Analyze
+    needs: [ build ]
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -78,6 +78,7 @@ jobs:
         category: "/language:${{matrix.language}}"
 
   pylint:
+    needs: [ build ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -98,6 +99,7 @@ jobs:
         OUTPUT=$(pylint $(git ls-files '*.py'))
         RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
         echo "PYLINTSCORE=$RATING" >> $GITHUB_ENV
+
   PR:
     needs: [analyze, pylint]
     runs-on: ubuntu-latest
