@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, reopened]
 
+  # Temporarily allow running this workflow from actions tab.
+  workflow_dispatch:
+
 jobs:
   analyze:
     name: Analyze
