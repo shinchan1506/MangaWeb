@@ -1,8 +1,10 @@
 name: pylint
 
 on:
-  pull_request:
-    types: [opened, reopened]
+  push:
+    branches:
+      - '*'
+      - '!main'
 
   # Temporarily allow running this workflow from actions tab.\
   workflow_dispatch:

@@ -4,9 +4,6 @@ on:
   pull_request:
     types: [opened, reopened]
 
-  # Temporarily allow running this workflow from actions tab.\
-  workflow_dispatch:
-
 jobs:
   analyze:
     name: Analyze
@@ -81,14 +78,10 @@ jobs:
       run: |
         OUTPUT=$(pylint $(git ls-files '*.py'))
         RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
-        echo "PYLINTSCORE=$RATING" >> $GITHUB_ENV
-
-  PR:
-    needs: [analyze, pylint]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check Scans
-      if: ${{ env.PYLINTSCORE }} <= ${{ 70.0 }}
+        PASSED=$(bc -l <<<"${RATING}>8.0")
+        echo "PylintPassed=$PASSED" >> $GITHUB_ENV
+    - name: Check Scan result
+      if: ${{ env.PylintPassed == 0 }}
       uses: actions/github-script@v3
       with:
         script: |
