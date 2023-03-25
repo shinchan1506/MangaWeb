@@ -1,10 +1,8 @@
-name: CIdev
+name: pullRequest
 
 on:
-  push:
-    branches:
-      - '*'
-      - '!main'
+  pull_request:
+    types: [opened, reopened]
 
 jobs:
   analyze:
@@ -81,11 +79,14 @@ jobs:
         OUTPUT=$(pylint $(git ls-files '*.py'))
         RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
         echo "PYLINTSCORE=$RATING" >> $GITHUB_ENV
+
   PR:
     needs: [analyze, pylint]
     runs-on: ubuntu-latest
     steps:
-    - name: True if scan passed
-      if: ${{ env.PYLINTSCORE >= 50.0 }}
-      run: |
-        echo "true"
+    - name: Check Scans
+      if: ${{ env.PYLINTSCORE }} <= ${{ 70.0 }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('Did not pass scans.')
