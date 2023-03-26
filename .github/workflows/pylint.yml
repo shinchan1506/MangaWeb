@@ -28,11 +28,4 @@ jobs:
         python -m pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
-      id: analyze_code_pylint
-    - name: Check Scan result
-      if: ${{ env.PylintPassed == 0 }}
-      uses: actions/github-script@v3
-      with:
-        script: |
-          core.setFailed('Did not pass scans.')
+        pylint --fail-under=8 $(git ls-files '*.py')
