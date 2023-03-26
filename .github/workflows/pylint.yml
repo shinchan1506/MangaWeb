@@ -28,12 +28,7 @@ jobs:
         python -m pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
-        OUTPUT=$(pylint $(git ls-files '*.py'))
-        echo "$OUTPUT" >> $GITHUB_OUTPUT
-        RATING=$(printf "$OUTPUT" | sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p')
-        PASSED=$(bc -l <<<"${RATING}>8.0")
-        echo "PylintPassed=$PASSED" >> $GITHUB_ENV
-        printf "$OUTPUT"
+        pylint $(git ls-files '*.py')
       id: analyze_code_pylint
     - name: Check Scan result
       if: ${{ env.PylintPassed == 0 }}
