@@ -2,8 +2,6 @@ name: Run Runner
 
 on:
   schedule:
-    branches:
-      - 'main'
     - cron: '00 00 * * 0'    
 
   # Temporarily allow running this workflow from actions tab.\
@@ -17,6 +15,8 @@ jobs:
         python-version: ["3.9"]
     steps:
     - uses: actions/checkout@v3
+      with:
+        ref: main
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
