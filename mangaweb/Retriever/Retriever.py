@@ -89,12 +89,16 @@ class Series():
         Returns:
             str: string representation of calling Series object
         """
+        started_publishing = self.started_publishing.strftime("%m/%d/%Y") if self.started_publishing is datetime else ""
+        ended_publishing = self.ended_publishing.strftime("%m/%d/%Y") if self.ended_publishing is datetime else ""
+
         series =  ("Series title: " + self.title +
                 " \nAuthor(s): " + ', '.join( str(item) for item in self.authors ) +
-                " \nStarted publishing: " + self.started_publishing.strftime("%m/%d/%Y") +
-                " \nEnded publishing: " + self.ended_publishing.strftime("%m/%d/%Y") +
+                " \nStarted publishing: " + started_publishing +
+                " \nEnded publishing: " + ended_publishing +
                 " \nGenre: " + self.category +
-                " \nCategory: " + self.category
+                " \nCategory: " + self.category +
+                " \nCover: " + self.series_cover
                 )
         # only print the number of volumes if the list is populated.
         if len(self.volumes) > 0:
@@ -112,6 +116,28 @@ class Series():
             self.volumes.append(book)
             return
         raise TypeError("Attempt to insert a " + str(type(book)) + " to a series object")
+    
+    def get_csv_header(self) -> str:
+        """Return header of instance variables for current object"""
+        keys = self.__dict__.keys()
+        return keys
+
+    def to_csv(self) -> str:
+        """Return comma separated string representation of current object.
+
+        Returns:
+            str: comma separated string representation of current object
+        """
+        values = self.__dict__.values()
+
+        # convert lists into strings
+        values = [','.join(str(x) for x in val) if isinstance(val, list) else val for val in values ]
+
+        # convert nonetypes into empty strings
+        values = ['' if val is None else val for val in values ]
+
+        return values
+
 
 class Book():
     """Encapsulates data about a Book"""
@@ -157,11 +183,13 @@ class Book():
         Returns:
             str: String representation of the calling book object.
         """
+        published = self.published.strftime("%m/%d/%Y") if self.published is datetime else ""
+
         return ("Book: " + self.title +
                 " \nAuthor: " + self.author +
                 " \nSeries: " + self.series +
                 " \nPublisher: " + self.publisher +
-                " \nPublished: " + self.published.strftime("%m/%d/%Y") +
+                " \nPublished: " + published +
                 " \nCover Art URL: " + self.cover_art_url)
 
     def to_csv(self) -> str:
@@ -194,6 +222,15 @@ class Retriever():
             Retriever: Generic Retriever
         """
         self.url = ""
+        self.headers = ""
+        self.proxies = ""
+    
+    def set_header(self, headers):
+        """Set the headers to be used in requests"""
+        self.headers = headers
+
+    def set_proxies(self, proxies):
+        self.proxies = proxies
 
     @abstractmethod
     def get_title(self, soup) -> str:
@@ -319,15 +356,20 @@ class Retriever():
 
         Args:
             product_url (str): url of product
+            headers (dict): request headers to send.
 
         Returns:
             BeautifulSoup: HTML parsed BeautifulSoup of url
         """
-        req = requests.get( product_url, timeout=240)
+        
+        verify = True if self.proxies is None or "" or {} else False
+        print ("getting page soup with: " + str(self.proxies))
+        req = requests.get( product_url, timeout=240, headers = self.headers, proxies=self.proxies, verify = verify )
+        print (f'finished getting soup with code {str(req.status_code)}')
         soup = BeautifulSoup(req.content, 'html.parser')
         return soup
 
-    def scrape_product(self, product_url) -> Book:
+    def scrape_product(self, product_url ) -> Book:
         """Gather the product information and encapsualte in a Book object.
 
         Args:
@@ -362,14 +404,14 @@ class Retriever():
         Returns:
             Series: Series object encapsulating series info.
         """
-        soup = self.__get_page_soup( product_url )
+        soup = self.__get_page_soup( product_url  )
         book = self.scrape_product( product_url )
 
         if book is None :
             raise ValueError("No book found at specified url")
 
         series = Series.series_lite(
-            title = book.title,
+            title = book.series,
             authors = book.author.split(','),
             started_publishing = book.published,
             ended_publishing = book.published,
@@ -456,16 +498,28 @@ class BookliveRetriever(Retriever):
         return None
 
     def get_published(self, soup) -> datetime:
-        return datetime.datetime(1970, 1, 1)
+        # Booklive only stores the published date of the e-book version. THerefore we will return NOne here.
+        return None
 
     def get_genre(self, soup) -> str:
-        return "booklive"
+        # genre is the 2nd item on the list in product_specs div element
+        specs = soup.select(".product_field.clearfix .product_specs .product_data.clearfix dd a")
+        if len(specs) > 3:
+            return specs[1].text.strip()
+        return None
 
     def get_category(self, soup) -> str:
-        return "booklive"
+        # category is the 1nd item on the list in product_specs div element
+        specs = soup.select(".product_field.clearfix .product_specs .product_data.clearfix dd a")
+        if len(specs) > 3:
+            return specs[0].text.strip()
+        return None
 
     def get_cover_art_url(self, soup) -> str:
-        return "booklive"
+        img_url = soup.select_one("#product_detail_area #product_area1 .product_image img")
+        if img_url:
+            return img_url.attrs['src'].strip()
+        return None
 
     def get_next_volume_url(self, soup) -> str:
         return None
@@ -478,6 +532,17 @@ class ProductCreator():
             "www.python.org": ExampleRetriever,
             "booklive.jp": BookliveRetriever
         }
+    
+    def __init__(self):
+        """Constructor for ProductCreator"""
+        self.headers = requests.utils.default_headers()
+        self.proxies = {}
+
+    def set_headers(self, headers):
+        self.headers = headers
+
+    def set_proxies(self, proxies):
+        self.proxies = proxies
 
     @staticmethod
     def get_host_name ( product_url ) -> str:
@@ -491,30 +556,31 @@ class ProductCreator():
         """
         parsed = urlparse( product_url )
         return parsed.hostname
+    
+    def create_retriever(self, retriever_object: Retriever):
+        retriever = retriever_object()
+        retriever.set_header (self.headers)
+        retriever.proxies = self.proxies
+        return retriever
 
-    @staticmethod
-    def get_retriever_from_hostname( hostname ):
+    def get_retriever_from_hostname( self, hostname ) -> Retriever:
         """Get the appropriate retriever object from the SOURCES dictionary.
 
         Args:
             hostname (str): hostname to lookfor
         """
         if hostname in ProductCreator.SOURCES:
-            return ProductCreator.SOURCES[hostname]()
+            return self.create_retriever( ProductCreator.SOURCES[hostname] )
 
         # remove any subdomains that may be in the hostname.
         extract = tldextract.extract( hostname )
         domain = extract.domain + '.' + extract.suffix
         if domain in ProductCreator.SOURCES:
-            return ProductCreator.SOURCES[domain]()
+            return self.create_retriever( ProductCreator.SOURCES[domain] )
 
         return None
-
-class BookCreator(ProductCreator):
-    """Class to create Book objects."""   
-
-    @staticmethod
-    def get_product ( product_url ) -> Book:
+    
+    def get_book( self, product_url ) -> Book:
         """Static method to create the appropriate abstract Retriever, according to passed URL
 
         Args:
@@ -523,15 +589,11 @@ class BookCreator(ProductCreator):
         Returns:
             Book: instance of Book class
         """
-        host = BookCreator.get_host_name( product_url )
-        retriever = BookCreator.get_retriever_from_hostname( host )
+        host = ProductCreator.get_host_name( product_url )
+        retriever = self.get_retriever_from_hostname( host )
         return retriever.scrape_product(product_url)
-
-class SeriesCreator(ProductCreator):
-    """Class to create a series"""
-
-    @staticmethod
-    def get_series ( product_url ) -> Series:
+    
+    def get_series (self, product_url ) -> Series:
         """Return a series object given a url to a book product. 
 
         Args:
@@ -540,6 +602,7 @@ class SeriesCreator(ProductCreator):
         Returns:
             Series: instance of Series class
         """
-        host = SeriesCreator.get_host_name( product_url )
-        retriever = SeriesCreator.get_retriever_from_hostname( host )
+        host = ProductCreator.get_host_name( product_url )
+        retriever = self.get_retriever_from_hostname( host )
         return retriever.scrape_series(product_url)
+    
