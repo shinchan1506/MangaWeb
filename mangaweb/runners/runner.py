@@ -34,7 +34,7 @@ for thread in threads:
     thread.join()
 
 # get value of all threads
-with open("test.csv", "w+") as csv_file:
+with open("test.csv", "w+", encoding='utf-8') as csv_file:
     writer = csv.writer(csv_file, delimiter=',', quotechar='\'', quoting=csv.QUOTE_NONE)
     creator = ProductCreator()
     writer.writerow(creator.get_series('https://booklive.jp/product/index/title_id/1000/').get_csv_header())

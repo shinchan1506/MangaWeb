@@ -3,6 +3,7 @@ import re
 import threading
 from bs4 import BeautifulSoup
 import requests
+from requests_html import HTMLSession
 
 
 class testThread (threading.Thread):
@@ -18,10 +19,10 @@ class testThread (threading.Thread):
         """Test if 200 response returned from google using proxy"""
         proxies = {
             'http': f'http://{self.proxy}',
-            'https': f'https://{self.proxy}',
+            'https': f'http://{self.proxy}',
         }
         try:
-            rsp = requests.get('https://www.google.com', proxies=proxies, verify=False, timeout=5)
+            rsp = requests.get('https://www.google.com', proxies=proxies, verify=False, timeout=10)
             return rsp.status_code == 200
         except Exception as exception:
             pass
@@ -44,12 +45,18 @@ class HttpProxyList():
         Returns:
             list: list of proxies as str (includes ports)
         """
-        regex = r"[0-9]+(?:\.[0-9]+){3}:[0-9]+"
-        c = requests.get("https://free-proxy-list.net/")
-        soup = BeautifulSoup(c.content, 'html.parser')
-        z = soup.find('textarea').get_text()
-        x = re.findall(regex, z)
-        return [str(proxy) for proxy in x]
+        regex = r"[0-9]+(?:\.[0-9]+){3}\n[0-9]+\nHTTP"
+        session = HTMLSession()
+        request = session.get("https://scrapingant.com/proxies/")
+        request.html.render() # render the page, execute js on page
+
+        page_soup = BeautifulSoup(request.content, 'html.parser')
+        proxes_text = page_soup.find('table').get_text()
+        
+        proxies_list = re.findall(regex, proxes_text, flags=re.MULTILINE)
+        proxies_list = [proxy.replace('\n', ':') for proxy in proxies_list]
+        proxies_list = [proxy.replace(':HTTP', '') for proxy in proxies_list]
+        return [str(proxy) for proxy in proxies_list]
     
     @classmethod
     def __create_test_proxy_threads(cls, proxy_list):

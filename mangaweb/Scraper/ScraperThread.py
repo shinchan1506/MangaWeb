@@ -23,7 +23,7 @@ class ScraperThread(threading.Thread):
         """Set the proxy for the current thread and update the creator object's header"""
         proxies = {
             'http': f'http://{proxy}',
-            'https': f'https://{proxy}',
+            'https': f'http://{proxy}',
         }
         self.creator.set_proxies( proxies )
 
